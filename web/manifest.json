@@ -1,6 +1,6 @@
 {
-    "name": "new_app",
-    "short_name": "new_app",
+    "name": "pi_racer",
+    "short_name": "pi_racer",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
