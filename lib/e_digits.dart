@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-class PiDigitsScreen extends StatefulWidget {
+class EDigitsScreen extends StatefulWidget {
   final int highScore;
-  const PiDigitsScreen({Key? key, required this.highScore}) : super(key: key);
+  const EDigitsScreen({Key? key, required this.highScore}) : super(key: key);
 
   @override
-  State<PiDigitsScreen> createState() => _PiDigitsScreenState();
+  State<EDigitsScreen> createState() => _EDigitsScreenState();
 }
 
-class _PiDigitsScreenState extends State<PiDigitsScreen> {
+class _EDigitsScreenState extends State<EDigitsScreen> {
   String? _rawDigits;
   int _displayLimit = 5000;
   static const int _chunkSize = 5000;
@@ -16,7 +16,7 @@ class _PiDigitsScreenState extends State<PiDigitsScreen> {
   Future<void> _loadDigits() async {
     final raw = await DefaultAssetBundle.of(
       context,
-    ).loadString('assets/pi_digits.txt');
+    ).loadString('assets/e_digits.txt');
     setState(() {
       _rawDigits = raw.replaceAll(RegExp(r'\s+'), '');
     });
@@ -185,7 +185,7 @@ class _PiDigitsScreenState extends State<PiDigitsScreen> {
                     vertical: 12.0,
                   ),
                 ),
-                child: const Text("もっと.."),
+                child: const Text("もっと"),
               ),
             ),
         ],

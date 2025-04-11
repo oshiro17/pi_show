@@ -10,7 +10,59 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// 指定桁数分（例では totalDigits で指定）から、ランダムな長さ（3～6桁）のセグメント毎に
 /// 「((answer + A) ÷ B) × B - A」という式を生成し、正解（answer）とともに返す。
-Map<String, dynamic> generateQuestions(
+Map<String, dynamic> generateQuestions1(
+  String piDigits, {
+  int totalDigits = 300,
+}) {
+  List<String> questionTexts = [];
+  List<int> questionAnswers = [];
+  int index = 0;
+  Random rand = Random();
+
+  while (index < totalDigits) {
+    int segmentLength = rand.nextInt(4) + 3; // 3〜6桁
+    if (index + segmentLength > totalDigits) {
+      segmentLength = totalDigits - index;
+    }
+    // 次の桁が存在して「0」なら、セグメントに含める
+    while ((index + segmentLength < totalDigits) &&
+        (piDigits[index + segmentLength] == '0')) {
+      segmentLength++;
+    }
+    String segment = piDigits.substring(index, index + segmentLength);
+    int answer = int.parse(segment);
+
+    // ここから「数字２桁 × 数字１桁 ＋ 数字」の式を生成する部分
+    // int X, Y, C;
+    int X = 0, Y = 0, C = 0;
+    bool valid = false;
+    int attempts = 0;
+    while (!valid && attempts < 100) {
+      attempts++;
+      X = rand.nextInt(90) + 10; // 10〜99 の2桁の数
+      Y = rand.nextInt(9) + 1; // 1〜9 の1桁の数
+      if (X * Y <= answer) {
+        // 積が answer 以下なら有効
+        C = answer - (X * Y);
+        valid = true;
+      }
+    }
+    if (!valid) {
+      // 万が一条件を満たす組み合わせが見つからなければ
+      X = 10;
+      Y = 1;
+      C = answer - (10 * 1);
+    }
+
+    String expr = '($X × $Y) + $C';
+    questionTexts.add(expr);
+    questionAnswers.add(answer);
+    index += segmentLength;
+  }
+  return {'texts': questionTexts, 'answers': questionAnswers};
+}
+
+Map<String, dynamic> generateQuestions2(
   String piDigits, {
   int totalDigits = 300,
 }) {
@@ -32,57 +84,28 @@ Map<String, dynamic> generateQuestions(
     String segment = piDigits.substring(index, index + segmentLength);
     int answer = int.parse(segment);
 
-    // 二桁以上の掛け算の条件を満たすための A, B, intermediate を選定する
+    // 「数字２桁 × 数字２桁 ＋ 数字」の式を生成する部分
+    int X = 0, Y = 0, C = 0;
     bool valid = false;
-    // ここで初期値を設定しておく
-    int A = 0;
-    int B = 0;
-    int intermediate = 0;
     int attempts = 0;
     while (!valid && attempts < 100) {
       attempts++;
-      int B_min = 10;
-      int B_max = min(99, ((answer + 99) ~/ 10));
-      if (B_min > B_max) {
-        // この場合、条件を満たす B が存在しないので break
-        break;
-      }
-      B = B_min + rand.nextInt(B_max - B_min + 1);
-
-      // A の最小値を計算: A は最低でも 10 であり、(answer + A) >= 10 * B となる必要がある
-      int A_min = max(10, 10 * B - answer);
-      if (A_min > 99) continue;
-
-      // (answer + A) % B == 0 となる A を探索
-      int modNeeded = ((B - (answer % B)) % B);
-      int candidate = modNeeded;
-      if (candidate < A_min) {
-        candidate += ((A_min - candidate + B - 1) ~/ B) * B;
-      }
-      if (candidate > 99) continue;
-      List<int> validAs = [];
-      for (int x = candidate; x <= 99; x += B) {
-        if (x >= A_min) validAs.add(x);
-      }
-      if (validAs.isEmpty) continue;
-      A = validAs[rand.nextInt(validAs.length)];
-      intermediate = (answer + A) ~/ B;
-      if (intermediate >= 10) {
+      X = rand.nextInt(90) + 10; // 10〜99 の2桁の数
+      Y = rand.nextInt(90) + 10; // 10〜99 の2桁の数
+      if (X * Y <= answer) {
+        // 積が answer 以下なら有効
+        C = answer - (X * Y);
         valid = true;
       }
     }
-
-    // 二桁以上の掛け算が作れなかった場合、旧方式で式を作成する
     if (!valid) {
-      B = rand.nextInt(4) + 2; // 2〜5
-      A = rand.nextInt(90) + 10; // 10〜99
-      while ((answer + A) % B != 0) {
-        A++;
-      }
-      intermediate = (answer + A) ~/ B;
+      // 万が一条件を満たす組み合わせが見つからなければ
+      X = 10;
+      Y = 10;
+      C = answer - (10 * 10);
     }
 
-    String expr = '($intermediate × $B) - $A';
+    String expr = '($X × $Y) + $C';
     questionTexts.add(expr);
     questionAnswers.add(answer);
     index += segmentLength;
@@ -90,9 +113,67 @@ Map<String, dynamic> generateQuestions(
   return {'texts': questionTexts, 'answers': questionAnswers};
 }
 
+Map<String, dynamic> generateQuestions3(
+  String piDigits, {
+  int totalDigits = 300,
+}) {
+  List<String> questionTexts = [];
+  List<int> questionAnswers = [];
+  int index = 0;
+  Random rand = Random();
+
+  // 必ず6桁ずつ切り出す（answerが十分大きくなることを想定）
+  while (index < totalDigits) {
+    int segmentLength = 6;
+    if (index + segmentLength > totalDigits) {
+      // 残りの桁数が6未満の場合は終了
+      break;
+    }
+    // 次の桁が存在して「0」であればセグメントに含める（連続性を保つため）
+    while ((index + segmentLength < totalDigits) &&
+        (piDigits[index + segmentLength] == '0')) {
+      segmentLength++;
+      if (index + segmentLength > totalDigits) break;
+    }
+    String segment = piDigits.substring(index, index + segmentLength);
+    int answer = int.parse(segment);
+
+    // 「数字3桁 × 数字3桁 ＋ 数字」の式を生成する部分
+    int X = 0, Y = 0, C = 0;
+    bool valid = false;
+    int attempts = 0;
+    while (!valid && attempts < 100) {
+      attempts++;
+      X = rand.nextInt(900) + 100; // 100〜999 の3桁の数
+      Y = rand.nextInt(900) + 100; // 100〜999 の3桁の数
+      if (X * Y <= answer) {
+        C = answer - (X * Y);
+        valid = true;
+      }
+    }
+    if (!valid) {
+      // 万が一条件を満たす組み合わせが見つからなければ
+      X = 100;
+      Y = 100;
+      C = answer - (100 * 100);
+    }
+
+    String expr = '($X × $Y) + $C';
+    questionTexts.add(expr);
+    questionAnswers.add(answer);
+    index += segmentLength;
+  }
+
+  return {'texts': questionTexts, 'answers': questionAnswers};
+}
+
 /// ------------------ PiGameScreen（ゲーム画面） ------------------
 class PiGameScreen extends StatefulWidget {
-  const PiGameScreen({Key? key}) : super(key: key);
+  final bool usePi;
+  final int level;
+
+  const PiGameScreen({Key? key, required this.usePi, required this.level})
+    : super(key: key);
 
   @override
   State<PiGameScreen> createState() => _PiGameScreenState();
@@ -123,15 +204,29 @@ class _PiGameScreenState extends State<PiGameScreen> {
   }
 
   Future<void> _loadPiDigitsAndSetup() async {
-    // ファイル読み込み後、trim()で前後の空白・改行を削除し、
-    // 必要ならreplaceAllで全ての空白文字を削除する
-    String rawPiDigits = await rootBundle.loadString('assets/pi_digits.txt');
-    String piDigits = rawPiDigits.replaceAll(RegExp(r'\s+'), '');
+    String fileName =
+        widget.usePi ? 'assets/pi_digits.txt' : 'assets/e_digits.txt';
+    String rawDigits = await rootBundle.loadString(fileName);
+    String digits = rawDigits.replaceAll(RegExp(r'\s+'), '');
+    int totalDigits = digits.length;
 
-    // ファイル内容に合わせて totalDigits を設定する（例: piDigits.length）
-    int totalDigits = piDigits.length;
+    Map<String, dynamic> questionsData;
 
-    final questionsData = generateQuestions(piDigits, totalDigits: totalDigits);
+    switch (widget.level) {
+      case 1:
+        questionsData = generateQuestions1(digits, totalDigits: totalDigits);
+        break;
+      case 2:
+        questionsData = generateQuestions2(digits, totalDigits: totalDigits);
+        break;
+      case 3:
+        questionsData = generateQuestions3(digits, totalDigits: totalDigits);
+        break;
+      default:
+        questionsData = generateQuestions1(digits, totalDigits: totalDigits);
+        break;
+    }
+
     questionTexts = questionsData['texts'];
     questionAnswers = questionsData['answers'];
 
@@ -182,6 +277,8 @@ class _PiGameScreenState extends State<PiGameScreen> {
         if (_userInput == questionAnswers[_currentIndex].toString()) {
           _checkAnswer();
           _resetTimer();
+        } else if (_userInput.length >= 18) {
+          _userInput = '';
         }
       }
     });
@@ -201,17 +298,74 @@ class _PiGameScreenState extends State<PiGameScreen> {
     }
   }
 
+  // void _goToResult() async {
+  //   _countdownTimer?.cancel();
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final highScore = prefs.getInt('highScore') ?? 0;
+  //   if (_score > highScore) {
+  //     await prefs.setInt('highScore', _score);
+  //   }
+  //   if (!mounted) return;
+  //   Navigator.pushReplacement(
+  //     context,
+  //     MaterialPageRoute(builder: (_) => ResultScreen(score: _score)),
+  //   );
+  // }
   void _goToResult() async {
     _countdownTimer?.cancel();
     final prefs = await SharedPreferences.getInstance();
-    final highScore = prefs.getInt('highScore') ?? 0;
+
+    // ここでキーを分ける
+    final scoreKey = widget.usePi ? 'highScore' : 'highScore_e';
+    final highScore = prefs.getInt(scoreKey) ?? 0;
+
     if (_score > highScore) {
-      await prefs.setInt('highScore', _score);
+      await prefs.setInt(scoreKey, _score);
     }
+
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => ResultScreen(score: _score)),
+      MaterialPageRoute(
+        builder: (_) => ResultScreen(score: _score, usePi: widget.usePi),
+      ),
+    );
+  }
+
+  void _giveUp() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text('(｡ )( ｡)', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Are you sure you want to give up?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              child: const Text(
+                'Bring it on',
+                style: TextStyle(color: Colors.lightBlueAccent),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // ダイアログを閉じるだけ
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Rage Quit',
+                style: TextStyle(color: Colors.redAccent),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // ダイアログを閉じる
+                _goToResult(); // リザルト画面に遷移
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -328,6 +482,20 @@ class _PiGameScreenState extends State<PiGameScreen> {
             const Spacer(),
             // 数字入力パッド（以下、既存のコードの入力パッド）
             _buildKeypad(),
+            ElevatedButton(
+              onPressed: _giveUp,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text(
+                'Give Up 🏳️',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
+            ),
           ],
         ),
       ),
@@ -400,7 +568,9 @@ class _PiGameScreenState extends State<PiGameScreen> {
 // 以下、ResultScreenはそのまま利用…
 class ResultScreen extends StatefulWidget {
   final int score;
-  const ResultScreen({Key? key, required this.score}) : super(key: key);
+  final bool usePi;
+  const ResultScreen({Key? key, required this.score, required this.usePi})
+    : super(key: key);
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
@@ -417,8 +587,9 @@ class _ResultScreenState extends State<ResultScreen> {
 
   Future<void> _loadHighScore() async {
     final prefs = await SharedPreferences.getInstance();
+    final key = widget.usePi ? 'highScore' : 'highScore_e';
     setState(() {
-      _highScore = prefs.getInt('highScore') ?? 0;
+      _highScore = prefs.getInt(key) ?? 0;
     });
   }
 
@@ -433,12 +604,12 @@ class _ResultScreenState extends State<ResultScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'ゲーム終了',
+                'Game Over',
                 style: TextStyle(color: Colors.white, fontSize: 32),
               ),
               const SizedBox(height: 24),
               Text(
-                'あなたのスコア: $score',
+                'Your Score: $score',
                 style: const TextStyle(
                   color: Colors.lightBlueAccent,
                   fontSize: 24,
@@ -446,7 +617,7 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
               if (_highScore != null)
                 Text(
-                  '最高スコア: $_highScore',
+                  'High Score: $_highScore',
                   style: const TextStyle(color: Colors.white70, fontSize: 18),
                 ),
               const SizedBox(height: 40),
@@ -465,7 +636,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     vertical: 16,
                   ),
                 ),
-                child: const Text('Home /)৺৺(\\'),
+                child: const Text('Back to Home\\'),
               ),
             ],
           ),

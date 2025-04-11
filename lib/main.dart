@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pi_racer/e_digits.dart';
 import 'package:pi_racer/game.dart';
 import 'package:pi_racer/pi_digits.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +20,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   int? _highScore;
+  bool usePi = true; // デフォルトで円周率を使用
 
   @override
   void initState() {
@@ -28,8 +30,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadHighScore() async {
     final prefs = await SharedPreferences.getInstance();
+    final key = usePi ? 'highScore' : 'highScore_e';
     setState(() {
-      _highScore = prefs.getInt('highScore') ?? 0;
+      _highScore = prefs.getInt(key) ?? 0;
     });
   }
 
@@ -50,6 +53,7 @@ class _MyAppState extends State<MyApp> {
     final Color buttonColor = const Color(0xFF424242);
 
     // 表示テキストを言語状態に応じて定義
+    String checkButtonText = usePi ? 'パイチェック' : 'eチェック';
     String levelOneLabel = isJapanese ? "レベル 1" : "Level 1";
     String levelOneDesc =
         isJapanese ? "2桁 × 1桁 の問題に挑戦！" : "2-digit × 1-digit Challenge";
@@ -64,7 +68,7 @@ class _MyAppState extends State<MyApp> {
 
     String titleText =
         isJapanese ? 'ただの暗算アプリ。\n 暗算チャレンジ' : 'Mental Math \nChallenge';
-    String supportText = isJapanese ? '開発者を支援' : 'Support Developer';
+    String supportText = isJapanese ? '開発者を応援' : 'Support Developer';
     // 言語ボタンは切替用の表示（現在日本語なら「English」と表示）
     String languageButtonText = isJapanese ? 'English' : '日本語';
     String startButtonText = isJapanese ? 'スタート' : 'Start';
@@ -102,9 +106,10 @@ class _MyAppState extends State<MyApp> {
               ),
               Align(
                 alignment: Alignment.centerRight,
-                child: Builder(
-                  builder: (context) {
-                    return IconButton(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
                       icon: const Icon(Icons.help_outline, color: Colors.white),
                       onPressed: () {
                         showDialog(
@@ -137,58 +142,161 @@ class _MyAppState extends State<MyApp> {
                           },
                         );
                       },
-                    );
-                  },
+                    ),
+                    Builder(
+                      builder: (BuildContext context) {
+                        return IconButton(
+                          icon: const Icon(Icons.settings, color: Colors.white),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  backgroundColor: Colors.black,
+                                  title: Text(
+                                    isJapanese ? "設定" : "Settings",
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isJapanese
+                                            ? "使用する定数を選んでください："
+                                            : "Choose which constant to use:",
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      RadioListTile<bool>(
+                                        activeColor: Colors.lightBlueAccent,
+                                        title: Text(
+                                          isJapanese
+                                              ? "円周率 π (3.14…)"
+                                              : "Pi (π ≈ 3.14)",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        value: true,
+                                        groupValue: usePi,
+                                        onChanged: (value) {
+                                          if (value != null) {
+                                            setState(() {
+                                              usePi = value;
+                                            });
+                                            _loadHighScore();
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                      ),
+                                      RadioListTile<bool>(
+                                        activeColor: Colors.lightBlueAccent,
+                                        title: Text(
+                                          isJapanese
+                                              ? "ネイピア数 e (2.71…)"
+                                              : "Euler's Number (e ≈ 2.71)",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        value: false,
+                                        groupValue: usePi,
+                                        onChanged: (value) {
+                                          if (value != null) {
+                                            setState(() {
+                                              usePi = value;
+                                            });
+                                            _loadHighScore();
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text(
+                                        isJapanese ? "キャンセル" : "Cancel",
+                                        style: const TextStyle(
+                                          color: Colors.lightBlueAccent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
+
               Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 12.0,
                 runSpacing: 8.0,
                 children: [
-                  _MenuButton(
-                    title: supportText,
-                    color: buttonColor,
-                    textColor: accentColor,
-                    onPressed: () async {
-                      const url =
-                          'https://www.amazon.jp/hz/wishlist/ls/TZLH9Q88S3EZ?ref_=wl_share';
-                      if (await canLaunch(url)) {
-                        await launch(url);
-                      } else {
-                        throw 'Could not launch $url';
-                      }
-                    },
+                  SizedBox(
+                    width: 165, // 幅を固定
+                    height: 45, // 高さも固定する場合は高さも指定
+                    child: _MenuButton(
+                      title: supportText,
+
+                      color: buttonColor,
+                      textColor: accentColor,
+                      onPressed: () async {
+                        const url =
+                            'https://www.amazon.jp/hz/wishlist/ls/TZLH9Q88S3EZ?ref_=wl_share';
+                        if (await canLaunch(url)) {
+                          await launch(url);
+                        } else {
+                          throw 'Could not launch $url';
+                        }
+                      },
+                    ),
                   ),
-                  _MenuButton(
-                    title: languageButtonText,
-                    color: buttonColor,
-                    textColor: accentColor,
-                    onPressed: toggleLanguage, // タップで言語切替
+
+                  SizedBox(
+                    width: 180, // 幅を固定
+                    height: 45, // 高さも固定する場合は高さも指定
+                    child: _MenuButton(
+                      title: languageButtonText,
+                      color: buttonColor,
+                      textColor: accentColor,
+                      onPressed: toggleLanguage,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16.0),
+              const SizedBox(height: 10.0),
               // 現在のレベルをかっこよく表示するウィジェット
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                  horizontal: 10, // 16 の半分
+                  vertical: 4, // 8 の半分
                 ),
                 decoration: BoxDecoration(
                   border: Border.all(color: accentColor),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4), // 8 の半分
                 ),
                 child: Text(
                   currentLevelText,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 12, // 20 の半分
                     fontWeight: FontWeight.bold,
                     color: accentColor,
                   ),
                 ),
               ),
-
+              // const SizedBox(height: 10.0),
               Expanded(
                 child: Center(
                   child: Column(
@@ -201,7 +309,11 @@ class _MyAppState extends State<MyApp> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => PiGameScreen(),
+                                    builder:
+                                        (context) => PiGameScreen(
+                                          usePi: usePi,
+                                          level: 1, // ← 好きなレベルにしてくれ
+                                        ),
                                   ),
                                 );
                               },
@@ -210,7 +322,7 @@ class _MyAppState extends State<MyApp> {
                                 foregroundColor: accentColor,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 40.0,
-                                  vertical: 16.0,
+                                  vertical: 8.0,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8.0),
@@ -227,7 +339,7 @@ class _MyAppState extends State<MyApp> {
                                   const SizedBox(height: 4),
                                   Text(
                                     levelOneDesc,
-                                    style: const TextStyle(fontSize: 16),
+                                    style: const TextStyle(fontSize: 10),
                                   ),
                                 ],
                               ),
@@ -242,7 +354,11 @@ class _MyAppState extends State<MyApp> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => PiGameScreen(),
+                                    builder:
+                                        (context) => PiGameScreen(
+                                          usePi: usePi,
+                                          level: 2, // ← 好きなレベルにしてくれ
+                                        ),
                                   ),
                                 );
                               },
@@ -251,7 +367,7 @@ class _MyAppState extends State<MyApp> {
                                 foregroundColor: accentColor,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 40.0,
-                                  vertical: 16.0,
+                                  vertical: 8.0,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8.0),
@@ -268,7 +384,7 @@ class _MyAppState extends State<MyApp> {
                                   const SizedBox(height: 4),
                                   Text(
                                     levelTwoDesc,
-                                    style: const TextStyle(fontSize: 16),
+                                    style: const TextStyle(fontSize: 10),
                                   ),
                                 ],
                               ),
@@ -282,7 +398,11 @@ class _MyAppState extends State<MyApp> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => PiGameScreen(),
+                                    builder:
+                                        (context) => PiGameScreen(
+                                          usePi: usePi,
+                                          level: 3, // ← 好きなレベルにしてくれ
+                                        ),
                                   ),
                                 );
                               },
@@ -291,7 +411,7 @@ class _MyAppState extends State<MyApp> {
                                 foregroundColor: accentColor,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 40.0,
-                                  vertical: 16.0,
+                                  vertical: 8.0,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8.0),
@@ -308,13 +428,13 @@ class _MyAppState extends State<MyApp> {
                                   const SizedBox(height: 4),
                                   Text(
                                     levelThreeDesc,
-                                    style: const TextStyle(fontSize: 16),
+                                    style: const TextStyle(fontSize: 10),
                                   ),
                                 ],
                               ),
                             ),
                       ),
-                      const SizedBox(height: 16.0),
+                      const SizedBox(height: 10.0),
                       Text(
                         subtitleText,
                         style: const TextStyle(
@@ -348,12 +468,18 @@ class _MyAppState extends State<MyApp> {
                             context,
                             MaterialPageRoute(
                               builder:
-                                  (context) => PiDigitsScreen(
-                                    highScore: _highScore ?? 0,
-                                  ),
+                                  (context) =>
+                                      usePi
+                                          ? PiDigitsScreen(
+                                            highScore: _highScore ?? 0,
+                                          )
+                                          : EDigitsScreen(
+                                            highScore: _highScore ?? 0,
+                                          ),
                             ),
                           );
                         },
+
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -371,9 +497,9 @@ class _MyAppState extends State<MyApp> {
                               ),
                             ],
                           ),
-                          child: const Text(
-                            'パイチェック',
-                            style: TextStyle(
+                          child: Text(
+                            checkButtonText,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -462,7 +588,10 @@ class _MenuButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
         textStyle: const TextStyle(fontWeight: FontWeight.bold),
       ),
-      child: Text(title),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(title, style: const TextStyle(fontSize: 35), maxLines: 1),
+      ),
     );
   }
 }

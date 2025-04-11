@@ -74,6 +74,7 @@ flutter:
   assets:
   - assets/music.mp3
   - assets/pi_digits.txt
+  - assets/e_digits.txt
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
